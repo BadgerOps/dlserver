@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Job Scheduler</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        #schedule {
+            background-color: #f0f0f0; /* light gray background */
+            padding: 20px; /* padding around the content */
+            margin-bottom: 20px; /* space below the div */
+        }
+        #getjobs {
+            background-color: #e0e0e0; /* slightly darker gray background */
+            padding: 20px; /* padding around the content */
+        }
+    </style>
+</head>
+<body>
+    <div id="schedule"></div>
+    <form 
+    hx-post="http://localhost:8080/schedule" 
+    hx-trigger="submit" 
+    hx-headers='{"Content-Type": "application/json"}' 
+    hx-ext="json-enc"
+    hx-target="#schedule" >
+        <label for="name">Job Name:</label><br>
+        <input type="text" id="name" name="name"><br>
+        <label for="url">Job URL:</label><br>
+        <input type="text" id="url" name="url"><br>
+        <label for="time">Time:</label><br>
+        <input type="datetime-local" id="time" name="time"><br>
+        <button type="submit">Schedule Job</button>
+    </form>
+    <script>
+        document.getElementById("time").value = new Date().toISOString().slice(0, 16);
+    </script>
+    </div> 
+    <div id="getjobs">
+        <button hx-get="http://localhost:8080/getjobs" hx-trigger="click" hx-swap="outerHTML" hx-ext="js:handleJobs">Get Jobs</button>
+        <script>
+            function handleJobs(data) {
+                let jobs = JSON.parse(data);
+                let table = "<table><tr><th>Job Name</th><th>Job URL</th><th>Time</th></tr>";
+                for (let i = 0; i < jobs.length; i++) {
+                    table += "<tr><td>" + jobs[i].name + "</td><td>" + jobs[i].url + "</td><td>" + jobs[i].time + "</td></tr>";
+                }
+                table += "</table>";
+                document.getElementById("getjobs").innerHTML = table;
+            }
+        </script>
+    </div>
+</body>
+</html>
