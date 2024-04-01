@@ -66,6 +66,9 @@
         button[type="submit"]:hover {
             background-color: #45a049; /* darker green on hover */
         }
+        .error {
+        color: red;
+        }
     </style>
 </head>
 <body>
@@ -76,16 +79,19 @@
     hx-headers='{"Content-Type": "application/json"}' 
     hx-ext="json-enc"
     hx-target="#schedule" >
-        <label for="name">Job Name:</label><br>
-        <input type="text" id="name" name="name"><br>
-        <label for="url">Job URL:</label><br>
-        <input type="text" id="url" name="url"><br>
-        <label for="time">Time:</label><br>
-        <input type="datetime-local" id="time" name="time"><br>
+        <label for="name">Job Name:</label>
+        <input type="text" id="name" name="name">
+        <span id="nameError" class="error"></span>
+        <label for="url">Job URL:</label>
+        <input type="text" id="url" name="url">
+        <span id="urlError" class="error"></span>
+        <label for="time">Time:</label>
+        <input type="datetime-local" id="time" name="time">
+        <span id="timeError" class="error"></span>
         <button type="submit">Schedule Job</button>
     </form>
     <script>
-        document.getElementById("time").value = new Date().toISOString().slice(0, 16);
+    document.getElementById("time").value = new Date().toISOString().slice(0, 16);
          // Get the form element
     const form = document.querySelector('form');
 
@@ -98,14 +104,22 @@
 
         // Validate the input values
         if (!name) {
-            alert('Please enter a job name.');
+            document.getElementById('nameError').textContent = 'Please enter a job name.';
             event.preventDefault(); // Prevent the form from submitting
-        } else if (!url) {
-            alert('Please enter a job URL.');
+        } else {
+            document.getElementById('nameError').textContent = '';
+        }
+        if (!url) {
+            document.getElementById('urlError').textContent = 'Please enter a job URL.';
             event.preventDefault(); // Prevent the form from submitting
-        } else if (!time) {
-            alert('Please enter a time.');
+        } else {
+            document.getElementById('urlError').textContent = '';
+        }
+        if (!time) {
+            document.getElementById('timeError').textContent = 'Please enter a time.';
             event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('timeError').textContent = '';
         }
     });
     </script>

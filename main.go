@@ -9,6 +9,8 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"unicode/utf8"
 
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/rs/cors"
@@ -92,7 +94,12 @@ func ScheduleJob(w http.ResponseWriter, r *http.Request) {
 	// then, convert the byte array to an io.Reader
 	r.Body = ioutil.NopCloser(bytes.NewReader(body))
 	// finally, parse the io.Reader
-	job := ParseJob(r.Body)
+	job, err := ParseJob(r.Body)
+	if err != nil {
+		log.Println(err)
+		// raise error to the user so they can correct the job
+		w.Write([]byte(fmt.Sprintf("Error: %s", err)))
+	}
 
 	// check to see if the job already exists using CheckDupJobs, otherwise save the new job to the DB
 
@@ -124,22 +131,29 @@ func GetScheduledJobs() ([]byte, error) {
 	return jobsJSON, nil
 }
 
-// func GetScheduledJobs() []byte {
-// 	// Get the list of jobs
-// 	jobs := GetJobsFromDB()
-
-// 	// Convert the jobs to a JSON response
-// 	jobsJSON, _ := json.Marshal(jobs)
-
-// 	return jobsJSON
-// }
-
-func ParseJob(body io.Reader) Job {
+func ParseJob(body io.Reader) (Job, error) {
 	// Parse the JSON body
 	job := Job{}
-	json.NewDecoder(body).Decode(&job)
-
-	return job
+	err := json.NewDecoder(body).Decode(&job)
+	if err != nil {
+		err := fmt.Errorf("Error parsing JSON: %s", err)
+		log.Println(err)
+		return job, err
+	}
+	// validate the job name is UTF-8
+	if !utf8.ValidString(job.Name) {
+		err := fmt.Errorf("Invalid UTF-8 string: %s", job.Name)
+		log.Println(err)
+		return job, err
+	}
+	// validate the URL is valid
+	_, err = url.ParseRequestURI(job.URL)
+	if err != nil {
+		err := fmt.Errorf("Invalid URL: %s", job.URL)
+		log.Println(err)
+		return job, err
+	}
+	return job, nil
 }
 
 // function to interact with local sqlite database
