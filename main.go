@@ -54,10 +54,6 @@ func main() {
 	fmt.Println("Web server started on port 8080")
 }
 
-func NewRouter() {
-	panic("unimplemented")
-}
-
 func GetJobs(w http.ResponseWriter, r *http.Request) {
 	// Get the list of jobs
 	jobs := GetScheduledJobs()
