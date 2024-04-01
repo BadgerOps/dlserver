@@ -5,12 +5,6 @@ import (
 	"log"
 )
 
-type Job struct {
-	Name string `json:"name"`
-	Time string `json:"time"`
-	URL  string `json:"url"`
-}
-
 // function to interact with local sqlite database
 func GetJobsFromDB() []Job {
 	// Connect to the database
