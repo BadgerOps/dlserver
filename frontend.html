@@ -14,6 +14,18 @@
             background-color: #e0e0e0; /* slightly darker gray background */
             padding: 20px; /* padding around the content */
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
     </style>
 </head>
 <body>
@@ -37,18 +49,40 @@
     </script>
     </div> 
     <div id="getjobs">
-        <button hx-get="http://localhost:8080/getjobs" hx-trigger="click" hx-swap="outerHTML" hx-ext="js:handleJobs">Get Jobs</button>
-        <script>
-            function handleJobs(data) {
-                let jobs = JSON.parse(data);
-                let table = "<table><tr><th>Job Name</th><th>Job URL</th><th>Time</th></tr>";
-                for (let i = 0; i < jobs.length; i++) {
-                    table += "<tr><td>" + jobs[i].name + "</td><td>" + jobs[i].url + "</td><td>" + jobs[i].time + "</td></tr>";
-                }
-                table += "</table>";
-                document.getElementById("getjobs").innerHTML = table;
-            }
-        </script>
     </div>
+    <table id="jobsTable">
+        <!-- Table header and body will be populated by JavaScript -->
+    </table>
+</div>
+<script>
+    // Fetch the jobs data from your API
+    fetch('http://localhost:8080/getjobs')
+        .then(response => response.json())
+        .then(data => {
+            // Create the table header
+            let thead = document.createElement('thead');
+            let headerRow = document.createElement('tr');
+            Object.keys(data[0]).forEach(key => {
+                let th = document.createElement('th');
+                th.textContent = key;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            document.getElementById('jobsTable').appendChild(thead);
+
+            // Create the table body
+            let tbody = document.createElement('tbody');
+            data.forEach(job => {
+                let row = document.createElement('tr');
+                Object.values(job).forEach(value => {
+                    let td = document.createElement('td');
+                    td.textContent = value;
+                    row.appendChild(td);
+                });
+                tbody.appendChild(row);
+            });
+            document.getElementById('jobsTable').appendChild(tbody);
+        });
+</script>
 </body>
 </html>
