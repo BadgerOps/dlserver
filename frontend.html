@@ -69,9 +69,50 @@
         .error {
         color: red;
         }
+        .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        /* Modal Content/Box */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <p id="modalText"></p>
+        </div>
+    </div>
     <div id="schedule" class="centered"></div>
     <form
     hx-post="http://localhost:8080/schedule" 
@@ -93,35 +134,66 @@
     <script>
     document.getElementById("time").value = new Date().toISOString().slice(0, 16);
          // Get the form element
-    const form = document.querySelector('form');
+         const form = document.querySelector('form');
 
-    // Attach an event listener to the form's submit event
-    form.addEventListener('submit', function(event) {
-        // Get the input values
-        const name = document.getElementById('name').value;
-        const url = document.getElementById('url').value;
-        const time = document.getElementById('time').value;
+// Get the modal
+const modal = document.getElementById('modal');
+const modalText = document.getElementById('modalText');
+const closeModal = document.querySelector('.close');
 
-        // Validate the input values
-        if (!name) {
-            document.getElementById('nameError').textContent = 'Please enter a job name.';
-            event.preventDefault(); // Prevent the form from submitting
-        } else {
-            document.getElementById('nameError').textContent = '';
-        }
-        if (!url) {
-            document.getElementById('urlError').textContent = 'Please enter a job URL.';
-            event.preventDefault(); // Prevent the form from submitting
-        } else {
-            document.getElementById('urlError').textContent = '';
-        }
-        if (!time) {
-            document.getElementById('timeError').textContent = 'Please enter a time.';
-            event.preventDefault(); // Prevent the form from submitting
-        } else {
-            document.getElementById('timeError').textContent = '';
-        }
-    });
+// When the user clicks on <span> (x), close the modal
+closeModal.onclick = function() {
+    modal.style.display = "none";
+}
+
+function sanitizeInput(input) {
+    const temp = document.createElement('div');
+    temp.textContent = input;
+    return temp.innerHTML;
+}
+// Attach an event listener to the form's submit event
+form.addEventListener('submit', function(event) {
+    // Get the input values and sanitize inputs to prevent xss
+    let clean = DOMPurify.sanitize(event);
+    const name = document.getElementById(sanitizeInput('name')).value;
+    const url = document.getElementById(sanitizeInput('url')).value;
+    const time = document.getElementById(sanitizeInput('time')).value;
+
+    // Validate the input values
+    if (!name) {
+        document.getElementById('nameError').textContent = 'Please enter a job name.';
+        event.preventDefault(); // Prevent the form from submitting
+    } else {
+        document.getElementById('nameError').textContent = '';
+    }
+    if (!url) {
+        document.getElementById('urlError').textContent = 'Please enter a job URL.';
+        event.preventDefault(); // Prevent the form from submitting
+    } else {
+        document.getElementById('urlError').textContent = '';
+    }
+    if (!time) {
+        document.getElementById('timeError').textContent = 'Please enter a time.';
+        event.preventDefault(); // Prevent the form from submitting
+    } else {
+        document.getElementById('timeError').textContent = '';
+    }
+
+    // If the form is valid, check if the job already exists
+    if (name && url && time) {
+        fetch(`http://localhost:8080/job?name=${name}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data) {
+                    // If the job already exists, show the modal with the job details
+                    modalText.textContent = `A job with the name ${name} already exists. Please enter a different name.`;
+                    modal.style.display = "block";
+                    event.preventDefault(); // Prevent the form from submitting
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+});
     </script>
     </div> 
     <table id="jobsTable">

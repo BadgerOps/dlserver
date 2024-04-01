@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,12 +21,6 @@ This program creates a simple threaded webserver with RESTful API endpoints.
 The first endpoint is a simple GET request that returns a JSON response of currently scheduled jobs
 The second endpoint is a POST that allows the user to schedule a new job
 */
-
-type Job struct {
-	Name string `json:"name"`
-	Time string `json:"time"`
-	URL  string `json:"url"`
-}
 
 func main() {
 	// http.Handle("/jobs", http.HandlerFunc(GetJobs))
@@ -99,6 +93,8 @@ func ScheduleJob(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		// raise error to the user so they can correct the job
 		w.Write([]byte(fmt.Sprintf("Error: %s", err)))
+		// then break out of the function instead of continuing
+		return
 	}
 
 	// check to see if the job already exists using CheckDupJobs, otherwise save the new job to the DB
@@ -140,34 +136,23 @@ func ParseJob(body io.Reader) (Job, error) {
 		log.Println(err)
 		return job, err
 	}
-	// validate the job name is UTF-8
-	if !utf8.ValidString(job.Name) {
-		err := fmt.Errorf("Invalid UTF-8 string: %s", job.Name)
+	// validate the job name is not empty
+	if utf8.RuneCountInString(job.Name) == 0 {
+		err = errors.Join(fmt.Errorf("Job name cannot be empty"))
 		log.Println(err)
-		return job, err
+	}
+	// validate the job name is not invalid characters
+	if !utf8.ValidString(job.Name) {
+		err = errors.Join(fmt.Errorf("Invalid characters in job name"))
+		log.Println(err)
 	}
 	// validate the URL is valid
 	_, err = url.ParseRequestURI(job.URL)
 	if err != nil {
-		err := fmt.Errorf("Invalid URL: %s", job.URL)
+		err = errors.Join(fmt.Errorf("Invalid URL: %s", job.URL))
 		log.Println(err)
-		return job, err
 	}
-	return job, nil
-}
-
-// function to interact with local sqlite database
-func GetJobsFromDB() []Job {
-	// Connect to the database
-	db := ConnectDB()
-
-	// Get the list of jobs
-	jobs := QueryJobs(db)
-
-	// Close the database connection
-	db.Close()
-
-	return jobs
+	return job, err
 }
 
 // check for duplicate jobs
@@ -182,55 +167,4 @@ func CheckDupJobs(job Job) (*Job, error) {
 	}
 
 	return nil, nil
-}
-
-func SavetoDB(job Job) {
-	// Connect to the database
-	db := ConnectDB()
-
-	// Insert the job into the database
-	log.Printf("Saving %s to database", job.Name)
-	_, err := db.Exec("INSERT INTO jobs (name, time, url) VALUES (?, ?, ?)", job.Name, job.Time, job.URL)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Close the database connection
-	db.Close()
-}
-
-func ConnectDB() *sql.DB {
-	// Open the database
-	db, err := sql.Open("sqlite3", "./jobs.db")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create the jobs table if it doesn't exist
-	_, err = db.Exec("CREATE TABLE IF NOT EXISTS jobs (id INTEGER PRIMARY KEY, name TEXT, time TEXT, url TEXT)")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return db
-}
-
-func QueryJobs(db *sql.DB) []Job {
-	// Query the database for the list of jobs
-	rows, err := db.Query("SELECT name, time, url FROM jobs")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Create a slice to hold the jobs
-	jobs := []Job{}
-
-	// Iterate over the rows and add the jobs to the slice
-	for rows.Next() {
-		job := Job{}
-		rows.Scan(&job.Name, &job.Time, &job.URL)
-		jobs = append(jobs, job)
-	}
-
-	return jobs
 }
