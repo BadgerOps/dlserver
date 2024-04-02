@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,12 +8,12 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"text/template"
 	"unicode/utf8"
 
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rs/cors"
 )
+
+const KeyServerAddr = "serverAddr"
 
 func catch(err error) {
 	if err != nil {
@@ -42,102 +41,23 @@ type Job struct {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, req *http.Request) {
-		// The "/" pattern matches everything, so we need to check
-		// that we're at the root here.
-		if req.URL.Path != "/" {
-			http.NotFound(w, req)
-			return
-		}
-		data := PageData{
-			Title:   "My Page Title",
-			Header:  "Welcome to my website!",
-			Content: "This is some content.",
-		}
-
-		RenderTemplate(w, data)
-	})
-	mux.HandleFunc("/getjobs", GetJobs)
-	mux.HandleFunc("/schedule", ScheduleJob)
-
+	// The "/" pattern matches everything, so we need to check
+	// that we're at the root here.
+	// currently unused
+	// data := PageData{
+	// 	Title:   "My Page Title",
+	// 	Header:  "Welcome to my website!",
+	// 	Content: "This is some content.",
+	// }
+	// RenderTemplate(w, data)
 	// Set up the CORS middleware
-	c := cors.New(cors.Options{
-		AllowedOrigins: []string{"*"},                      // Allow all origins
-		AllowedMethods: []string{"GET", "POST", "OPTIONS"}, // Allow these HTTP methods
-		AllowedHeaders: []string{"*"},                      // Allow all headers
-	})
-
+	// Allow all origins
+	// Allow these HTTP methods
+	// Allow all headers
 	// Wrap the mux with the cors handler
-	handler := c.Handler(mux)
 	// Start the server
-	slog.Info("Web server started on port 8080")
-	http.ListenAndServe(":8080", handler)
-}
-
-func GetJobs(w http.ResponseWriter, r *http.Request) {
-	// Get the list of jobs in json format
-	jobs, err := GetScheduledJobs()
-	if err != nil {
-		slog.Error("Error: %s", err)
-		return
-	}
-
-	if err != nil {
-		slog.Error("Error: %s", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	RenderJobsTmpl(w, jobs)
-}
-
-func RenderJobsTmpl(w http.ResponseWriter, jobs []byte) {
-	// set up var for data, from the Job struct
-	var data []Job
-	// unmarshal the jobs into the data var
-	err := json.Unmarshal(jobs, &data)
-	catchHTTPerr(err, w)
-	// render the template for joblist.html
-	slog.Debug("Rendering joblist.html")
-	tmpl, err := template.ParseFiles("joblist.html")
-	catchHTTPerr(err, w)
-
-	err = tmpl.Execute(w, data)
-	catchHTTPerr(err, w)
-}
-
-func ScheduleJob(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	// mux.Body should look like {"name": "job name", "time": "time to run the job", "url": "file to download"}
-	// create a dummy io.reader for testing
-	// testreader := strings.NewReader(`{"name": "Foobar Job", "time": "1970-01-01 13:37:00", "url": "https://blog.badgerops.net/content/images/2020/03/badger.png"}`)
-	// first, convert the URL encoded string to a byte array
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		slog.Error("Error: %s", err)
-	}
-	// then, convert the byte array to an io.Reader
-	r.Body = io.NopCloser(bytes.NewReader(body))
-	// finally, parse the io.Reader
-	job, err := ParseJob(r.Body)
-	if err != nil {
-		slog.Error("Error: %s", err)
-		// raise error to the user so they can correct the job
-		w.Write([]byte(fmt.Sprintf("Error: %s", err)))
-		// then break out of the function instead of continuing
-		return
-	}
-
-	// check to see if the job already exists using CheckDupJobs, otherwise save the new job to the DB
-	existingJob, err := CheckDupJobs(job)
-	catch(err)
-	if existingJob != nil {
-		w.Write([]byte(fmt.Sprintf("Existing job found: %s", existingJob)))
-	}
-	if existingJob == nil {
-		SavetoDB(job)
-		w.Write([]byte(fmt.Sprintf("Job %s scheduled", job.Name)))
-	}
+	err := serveHTTP()
+	catchHTTPerr(err, nil)
 }
 
 func GetScheduledJobs() ([]byte, error) {

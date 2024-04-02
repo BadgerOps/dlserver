@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Job Scheduler</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+    <style>
+        #schedule {
+            background-color: #f0f0f0; /* light gray background */
+            padding: 20px; /* padding around the content */
+            margin-bottom: 20px; /* space below the div */
+        }
+        #getjobs {
+            background-color: #e0e0e0; /* slightly darker gray background */
+            padding: 20px; /* padding around the content */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+        }
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+        .centered {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0; /* remove default margin */
+            background-color: #f0f0f0; /* light gray background */
+        }
+        form {
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0; /* light gray background */
+            padding: 20px; /* padding around the content */
+            margin-bottom: 20px; /* space below the form */
+            width: 500px; /* fixed width */
+            border-radius: 5px; /* rounded corners */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* subtle shadow for depth */
+
+        }
+        label {
+            display: block; /* each label on a new line */
+            margin-top: 20px; /* space above each label */
+        }
+        input[type="text"], input[type="datetime-local"] {
+            width: 100%; /* full width */
+            padding: 5px; /* padding inside the input */
+            border: 1px solid #ddd; /* light gray border */
+            border-radius: 5px; /* rounded corners */
+        }
+        button[type="submit"] {
+            background-color: #4CAF50; /* green background */
+            color: white; /* white text */
+            padding: 10px 20px; /* padding around the text */
+            border: none; /* no border */
+            border-radius: 5px; /* rounded corners */
+            cursor: pointer; /* hand cursor on hover */
+            width: 100%; /* full width */
+        }
+        button[type="submit"]:hover {
+            background-color: #45a049; /* darker green on hover */
+        }
+        .error {
+        color: red;
+        }
+        .modal {
+        display: none; /* Hidden by default */
+        position: fixed; /* Stay in place */
+        z-index: 1; /* Sit on top */
+        left: 0;
+        top: 0;
+        width: 100%; /* Full width */
+        height: 100%; /* Full height */
+        overflow: auto; /* Enable scroll if needed */
+        background-color: rgb(0,0,0); /* Fallback color */
+        background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+        }
+        /* Modal Content/Box */
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto; /* 15% from the top and centered */
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%; /* Could be more or less, depending on screen size */
+        }
+
+        /* The Close Button */
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+    </style>
+    {{ if .Success }}
+    <h1>"Job submitted!"</h1>
+    {{ else }}
+</head>
+<body>
+    <div id="schedule" class="centered"></div>
+    <form
+    hx-post="http://localhost:8080/schedule" 
+    hx-trigger="submit" 
+    hx-headers='{"Content-Type": "application/json"}' 
+    hx-ext="json-enc"
+    hx-target="#schedule" >
+        <label for="name">Job Name:</label>
+        <input type="text" id="name" name="name">
+        <span id="nameError" class="error"></span>
+        <label for="url">Job URL:</label>
+        <input type="text" id="url" name="url">
+        <span id="urlError" class="error"></span>
+        <label for="time">Time:</label>
+        <input type="datetime-local" id="time" name="time">
+        <span id="timeError" class="error"></span>
+        <button type="submit">Schedule Job</button>
+    </form>
+    <script>
+    document.getElementById("time").value = new Date().toISOString().slice(0, 16);
+    // Get the form element
+    const form = document.querySelector('form');
+    function sanitizeInput(input) {
+        const temp = document.createElement('div');
+        temp.textContent = input;
+        return temp.innerHTML;
+    }
+    // Attach an event listener to the form's submit event
+    form.addEventListener('submit', function(event) {
+        // Get the input values and sanitize inputs to prevent xss
+        let clean = DOMPurify.sanitize(event);
+        const name = document.getElementById(sanitizeInput('name')).value;
+        const url = document.getElementById(sanitizeInput('url')).value;
+        const time = document.getElementById(sanitizeInput('time')).value;
+
+        // Validate the input values
+        if (!name) {
+            document.getElementById('nameError').textContent = 'Please enter a job name.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('nameError').textContent = '';
+        }
+        if (!url) {
+            document.getElementById('urlError').textContent = 'Please enter a job URL.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('urlError').textContent = '';
+        }
+        if (!time) {
+            document.getElementById('timeError').textContent = 'Please enter a time.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('timeError').textContent = '';
+        }
+        // If the form is valid, check if the job already exists
+        // if (name && url && time) {
+        //     fetch(`http://localhost:8080/job?name=${name}`)
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             if (data) {
+        //                 // If the job already exists, show the modal with the job details
+        //                 modalText.textContent = `A job with the name ${name} already exists. Please enter a different name.`;
+        //                 modal.style.display = "block";
+        //                 event.preventDefault(); // Prevent the form from submitting
+        //             }
+        //         })
+        //         .catch(error => console.error('Error:', error));
+        // }
+        });
+    </script>
+<p>
+    <a href="/getjobs">See Existing Jobs</a>
+</p>
+</body>
+</html>
+{{ end}}
