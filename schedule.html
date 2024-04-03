@@ -105,14 +105,11 @@
             cursor: pointer;
         }
     </style>
+    {{ if .Success }}
+    <h1>"Job submitted!"</h1>
+    {{ else }}
 </head>
 <body>
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <p id="modalText"></p>
-        </div>
-    </div>
     <div id="schedule" class="centered"></div>
     <form
     hx-post="http://localhost:8080/schedule" 
@@ -133,111 +130,59 @@
     </form>
     <script>
     document.getElementById("time").value = new Date().toISOString().slice(0, 16);
-         // Get the form element
-         const form = document.querySelector('form');
-
-// Get the modal
-const modal = document.getElementById('modal');
-const modalText = document.getElementById('modalText');
-const closeModal = document.querySelector('.close');
-
-// When the user clicks on <span> (x), close the modal
-closeModal.onclick = function() {
-    modal.style.display = "none";
-}
-
-function sanitizeInput(input) {
-    const temp = document.createElement('div');
-    temp.textContent = input;
-    return temp.innerHTML;
-}
-// Attach an event listener to the form's submit event
-form.addEventListener('submit', function(event) {
-    // Get the input values and sanitize inputs to prevent xss
-    let clean = DOMPurify.sanitize(event);
-    const name = document.getElementById(sanitizeInput('name')).value;
-    const url = document.getElementById(sanitizeInput('url')).value;
-    const time = document.getElementById(sanitizeInput('time')).value;
-
-    // Validate the input values
-    if (!name) {
-        document.getElementById('nameError').textContent = 'Please enter a job name.';
-        event.preventDefault(); // Prevent the form from submitting
-    } else {
-        document.getElementById('nameError').textContent = '';
+    // Get the form element
+    const form = document.querySelector('form');
+    function sanitizeInput(input) {
+        const temp = document.createElement('div');
+        temp.textContent = input;
+        return temp.innerHTML;
     }
-    if (!url) {
-        document.getElementById('urlError').textContent = 'Please enter a job URL.';
-        event.preventDefault(); // Prevent the form from submitting
-    } else {
-        document.getElementById('urlError').textContent = '';
-    }
-    if (!time) {
-        document.getElementById('timeError').textContent = 'Please enter a time.';
-        event.preventDefault(); // Prevent the form from submitting
-    } else {
-        document.getElementById('timeError').textContent = '';
-    }
+    // Attach an event listener to the form's submit event
+    form.addEventListener('submit', function(event) {
+        // Get the input values and sanitize inputs to prevent xss
+        let clean = DOMPurify.sanitize(event);
+        const name = document.getElementById(sanitizeInput('name')).value;
+        const url = document.getElementById(sanitizeInput('url')).value;
+        const time = document.getElementById(sanitizeInput('time')).value;
 
-    // If the form is valid, check if the job already exists
-    if (name && url && time) {
-        fetch(`http://localhost:8080/job?name=${name}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data) {
-                    // If the job already exists, show the modal with the job details
-                    modalText.textContent = `A job with the name ${name} already exists. Please enter a different name.`;
-                    modal.style.display = "block";
-                    event.preventDefault(); // Prevent the form from submitting
-                }
-            })
-            .catch(error => console.error('Error:', error));
-    }
-});
-    </script>
-    </div> 
-    <table id="jobsTable">
-        <!-- Table header and body will be populated by JavaScript -->
-    </table>
-</div>
-<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
-<button type=submit id="refreshJobs">Refresh Jobs</button>
-
-<script>
-    // Wrap the AJAX call in a function
-    function refreshJobs() {
-        // Clear the existing table data
-        $('#jobsTable').empty();
-
-        // Fetch the jobs data from your API
-        $.ajax({
-            url: 'http://localhost:8080/getjobs',
-            type: 'GET',
-            success: function(data) {
-                // Create the table header
-                let headerRow = $('<tr/>');
-                Object.keys(data[0]).forEach(key => {
-                    headerRow.append($('<th/>').text(key));
-                });
-                $('#jobsTable').append($('<thead/>').append(headerRow));
-
-                // Create the table body
-                data.forEach(job => {
-                    let row = $('<tr/>');
-                    Object.values(job).forEach(value => {
-                        row.append($('<td/>').text(value));
-                    });
-                    $('#jobsTable').append(row);
-                });
-            }
+        // Validate the input values
+        if (!name) {
+            document.getElementById('nameError').textContent = 'Please enter a job name.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('nameError').textContent = '';
+        }
+        if (!url) {
+            document.getElementById('urlError').textContent = 'Please enter a job URL.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('urlError').textContent = '';
+        }
+        if (!time) {
+            document.getElementById('timeError').textContent = 'Please enter a time.';
+            event.preventDefault(); // Prevent the form from submitting
+        } else {
+            document.getElementById('timeError').textContent = '';
+        }
+        // If the form is valid, check if the job already exists
+        // if (name && url && time) {
+        //     fetch(`http://localhost:8080/job?name=${name}`)
+        //         .then(response => response.json())
+        //         .then(data => {
+        //             if (data) {
+        //                 // If the job already exists, show the modal with the job details
+        //                 modalText.textContent = `A job with the name ${name} already exists. Please enter a different name.`;
+        //                 modal.style.display = "block";
+        //                 event.preventDefault(); // Prevent the form from submitting
+        //             }
+        //         })
+        //         .catch(error => console.error('Error:', error));
+        // }
         });
-    }
-
-    // Call the function when the page loads to populate the table initially
-    refreshJobs();
-
-    // Attach the function to the button's click event
-    $('#refreshJobs').click(refreshJobs);
-</script>
+    </script>
+<p>
+    <a href="/getjobs">See Existing Jobs</a>
+</p>
 </body>
 </html>
+{{ end}}
